@@ -31,21 +31,26 @@ def test_extract_pdf_columns_auto_orders_two_column_reasonably() -> None:
     detection = detect_pdf(input_pdf, settings=Settings())
 
     extraction_off = extract_pdf(
-        input_pdf, detection, settings=Settings(columns_mode=ColumnsMode.OFF)
+        input_pdf,
+        detection,
+        settings=Settings(columns_mode=ColumnsMode.OFF),
     )
     text_off = extraction_off.pages[0].raw_text
     assert text_off
 
     extraction_auto = extract_pdf(
-        input_pdf, detection, settings=Settings(columns_mode=ColumnsMode.AUTO)
+        input_pdf,
+        detection,
+        settings=Settings(columns_mode=ColumnsMode.AUTO),
     )
     text_auto = extraction_auto.pages[0].raw_text
     assert text_auto
 
     # In AUTO mode, we read left column top-to-bottom, then right column.
-    assert "Left column line four has words\n\nRight column line one has words" in text_auto
+    expected_join = "Left column line four has words\n\nRight column line one has words"
+    assert expected_join in text_auto
     # In OFF mode, we should not see the explicit left-then-right column join marker.
-    assert "Left column line four has words\n\nRight column line one has words" not in text_off
+    assert expected_join not in text_off
 
 
 def test_extract_pdf_force_ocr_uses_mocked_tesseract_and_populates_confidence(
@@ -76,7 +81,9 @@ def test_extract_pdf_force_ocr_uses_mocked_tesseract_and_populates_confidence(
     assert not any("not implemented" in w.lower() for w in extraction.warnings)
 
 
-def test_extract_pdf_ocr_page_failure_keeps_pipeline_alive(mocker: pytest.MockFixture) -> None:
+def test_extract_pdf_ocr_page_failure_keeps_pipeline_alive(
+    mocker: pytest.MockFixture,
+) -> None:
     input_pdf = PDFS_DIR / "simple_noise.pdf"
     detection = detect_pdf(input_pdf, settings=Settings())
     page_count = detection.meta.page_count

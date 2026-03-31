@@ -25,7 +25,11 @@ EXPECTED_DIR = FIXTURES_DIR / "expected"
         ("two_column.pdf", "two_column.md"),
     ],
 )
-def test_pipeline_end_to_end_text_layer(tmp_path: Path, pdf_name: str, expected_name: str) -> None:
+def test_pipeline_end_to_end_text_layer(
+    tmp_path: Path,
+    pdf_name: str,
+    expected_name: str,
+) -> None:
     input_pdf = PDFS_DIR / pdf_name
     expected_md = (EXPECTED_DIR / expected_name).read_text(encoding="utf-8")
 
@@ -89,7 +93,16 @@ def test_cli_diff_integration(tmp_path: Path) -> None:
     out_md = tmp_path / "cli.md"
 
     runner = CliRunner()
-    result = runner.invoke(app, [str(input_pdf), "--no-llm", "--diff", "-o", str(out_md)])
+    result = runner.invoke(
+        app,
+        [
+            str(input_pdf),
+            "--no-llm",
+            "--diff",
+            "-o",
+            str(out_md),
+        ],
+    )
     assert result.exit_code == 0
     assert out_md.exists()
     assert "classification: TEXT_LAYER" in result.stderr
