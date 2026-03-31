@@ -1,0 +1,10 @@
+services:
+  pulp:
+    build: .
+    volumes:
+      - ./:/app
+      - ./data:/docs
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    command: /docs/input.pdf -o /docs/output.md --diff
+
