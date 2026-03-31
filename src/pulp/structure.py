@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from pulp.config import Settings
@@ -51,7 +50,7 @@ def structure_document(
 
     user_text = _format_cleaned_for_llm(cleaned)
 
-    model = os.getenv("PULP_ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+    model = settings.anthropic_model
 
     try:
         client = _Anthropic(api_key=settings.anthropic_api_key)

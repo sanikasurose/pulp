@@ -40,6 +40,42 @@ def _version_callback(value: bool) -> None:
     raise typer.Exit()
 
 
+def _list_subtract(list_a: list[str], list_b: list[str]) -> list[str]:
+    remaining = list(list_a)
+    for item in list_b:
+        try:
+            remaining.remove(item)
+        except ValueError:
+            continue
+    return remaining
+
+
+def _format_diff_summary(*, detection, extraction, cleaned, structured, llm_enabled: bool) -> str:
+    clean_stage_warnings = _list_subtract(list(cleaned.warnings), list(extraction.warnings))
+    structure_stage_warnings = _list_subtract(list(structured.warnings), list(cleaned.warnings))
+
+    fell_back = llm_enabled and any("Using heuristic output." in w for w in structured.warnings)
+
+    stats = cleaned.stats
+    lines = [
+        f"classification: {detection.meta.classification}",
+        f"page_count: {detection.meta.page_count}",
+        f"avg_chars_per_page: {detection.avg_chars_per_page:.1f}",
+        f"clean.removed_page_number_lines: {stats.removed_page_number_lines}",
+        f"clean.removed_header_footer_lines: {stats.removed_header_footer_lines}",
+        f"clean.rejoined_hyphenations: {stats.rejoined_hyphenations}",
+        f"clean.reassembled_paragraphs: {stats.reassembled_paragraphs}",
+        f"clean.dropped_blank_pages: {stats.dropped_blank_pages}",
+        "warnings.detect: 0",
+        f"warnings.extract: {len(extraction.warnings)}",
+        f"warnings.clean: {len(clean_stage_warnings)}",
+        f"warnings.structure: {len(structure_stage_warnings)}",
+        f"llm.enabled: {str(bool(llm_enabled)).lower()}",
+        f"llm.fell_back: {str(bool(fell_back)).lower()}",
+    ]
+    return "\n".join(lines)
+
+
 @app.command("pulp")
 def pulp_command(
     input_pdf: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True),
@@ -137,39 +173,3 @@ def pulp_command(
 
 if __name__ == "__main__":
     app()
-
-
-def _list_subtract(list_a: list[str], list_b: list[str]) -> list[str]:
-    remaining = list(list_a)
-    for item in list_b:
-        try:
-            remaining.remove(item)
-        except ValueError:
-            continue
-    return remaining
-
-
-def _format_diff_summary(*, detection, extraction, cleaned, structured, llm_enabled: bool) -> str:
-    clean_stage_warnings = _list_subtract(list(cleaned.warnings), list(extraction.warnings))
-    structure_stage_warnings = _list_subtract(list(structured.warnings), list(cleaned.warnings))
-
-    fell_back = llm_enabled and any("Using heuristic output." in w for w in structured.warnings)
-
-    stats = cleaned.stats
-    lines = [
-        f"classification: {detection.meta.classification}",
-        f"page_count: {detection.meta.page_count}",
-        f"avg_chars_per_page: {detection.avg_chars_per_page:.1f}",
-        f"clean.removed_page_number_lines: {stats.removed_page_number_lines}",
-        f"clean.removed_header_footer_lines: {stats.removed_header_footer_lines}",
-        f"clean.rejoined_hyphenations: {stats.rejoined_hyphenations}",
-        f"clean.reassembled_paragraphs: {stats.reassembled_paragraphs}",
-        f"clean.dropped_blank_pages: {stats.dropped_blank_pages}",
-        "warnings.detect: 0",
-        f"warnings.extract: {len(extraction.warnings)}",
-        f"warnings.clean: {len(clean_stage_warnings)}",
-        f"warnings.structure: {len(structure_stage_warnings)}",
-        f"llm.enabled: {str(bool(llm_enabled)).lower()}",
-        f"llm.fell_back: {str(bool(fell_back)).lower()}",
-    ]
-    return "\n".join(lines)

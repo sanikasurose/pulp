@@ -86,7 +86,7 @@ def _extract_pdf_ocr(
             pages.append(ExtractedPage(page_number=page_number, raw_text="", ocr_confidence=None))
             continue
 
-        image = images[i]
+        image = _preprocess_ocr_image(images[i], page_number=page_number, warnings=warnings)
 
         try:
             text = pytesseract.image_to_string(image) or ""
@@ -110,6 +110,31 @@ def _extract_pdf_ocr(
         )
 
     return pages, warnings
+
+
+def _preprocess_ocr_image(image: object, *, page_number: int, warnings: list[str]) -> object:
+    try:
+        from PIL import Image, ImageEnhance, ImageOps
+    except Exception:
+        return image
+
+    if not isinstance(image, Image.Image):
+        return image
+
+    try:
+        # Grayscale.
+        out = ImageOps.grayscale(image)
+        # Contrast enhancement (deterministic).
+        out = ImageEnhance.Contrast(out).enhance(1.6)
+        # Autocontrast to stretch values.
+        out = ImageOps.autocontrast(out)
+    except Exception as exc:  # noqa: BLE001
+        warnings.append(
+            f"OCR preprocessing failed for page {page_number} ({exc.__class__.__name__})."
+        )
+        return image
+
+    return out
 
 
 def _ocr_confidence_from_data(data: object) -> float | None:
