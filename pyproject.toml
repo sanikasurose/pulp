@@ -7,14 +7,12 @@ requires-python = ">=3.11"
 dependencies = [
   "anthropic",
   "camelot-py",
-  "loguru",
   "pdf2image",
   "pdfplumber",
   "pillow",
   "pydantic>=2",
   "pydantic-settings",
   "pytesseract",
-  "tiktoken",
   "typer",
 ]
 
@@ -28,6 +26,7 @@ dev = [
   "pytest-mock",
   "pytest-snapshot",
   "ruff",
+  "tiktoken",
 ]
 
 [build-system]

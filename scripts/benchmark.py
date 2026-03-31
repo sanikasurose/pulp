@@ -8,6 +8,8 @@ import warnings
 from pathlib import Path
 from typing import Any
 
+import tiktoken
+
 from pulp.clean import clean_extraction
 from pulp.config import Settings
 from pulp.detect import detect_pdf
@@ -30,7 +32,8 @@ def _format_md_table(rows: list[dict[str, Any]]) -> str:
         "classification",
         "page_count",
         "input_bytes",
-        "output_chars",
+        "input_tokens",
+        "output_tokens",
         "warnings",
         "runtime_s",
     ]
@@ -77,15 +80,19 @@ def run_benchmark(
         "docs": 0,
         "pages": 0,
         "input_bytes": 0,
-        "output_chars": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
         "warnings": 0,
         "runtime_s": 0.0,
     }
+
+    enc = tiktoken.get_encoding("cl100k_base")
 
     with tempfile.TemporaryDirectory(prefix="pulp_bench_") as tmp_dir:
         tmp_dir_path = Path(tmp_dir)
 
         for pdf_path in pdf_paths:
+            extraction = None
             start = time.perf_counter()
             try:
                 detection = detect_pdf(pdf_path, settings=settings)
@@ -108,6 +115,10 @@ def run_benchmark(
                 detection = None
             end = time.perf_counter()
 
+            raw_input_text = "\n".join(p.raw_text for p in extraction.pages) if extraction is not None else ""
+            input_tokens = len(enc.encode(raw_input_text))
+            output_tokens = len(enc.encode(output_text))
+
             runtime_s = end - start
             file_size = pdf_path.stat().st_size
 
@@ -124,7 +135,8 @@ def run_benchmark(
                 "classification": classification,
                 "page_count": page_count,
                 "input_bytes": file_size,
-                "output_chars": len(output_text),
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
                 "warnings": warning_count,
                 "runtime_s": f"{runtime_s:.3f}",
             }
@@ -133,7 +145,8 @@ def run_benchmark(
             totals["docs"] += 1
             totals["pages"] += page_count
             totals["input_bytes"] += file_size
-            totals["output_chars"] += len(output_text)
+            totals["input_tokens"] += input_tokens
+            totals["output_tokens"] += output_tokens
             totals["warnings"] += warning_count
             totals["runtime_s"] += runtime_s
 
@@ -148,7 +161,8 @@ def run_benchmark(
     md_lines.append(f"- total_pages: {totals['pages']}")
     total_input_bytes = int(totals["input_bytes"])
     md_lines.append(f"- total_input: {total_input_bytes} ({_human_bytes(total_input_bytes)})")
-    md_lines.append(f"- total_output_chars: {totals['output_chars']}")
+    md_lines.append(f"- total_input_tokens: {totals['input_tokens']}")
+    md_lines.append(f"- total_output_tokens: {totals['output_tokens']}")
     md_lines.append(f"- total_warnings: {totals['warnings']}")
     md_lines.append(f"- total_runtime_s: {totals['runtime_s']:.3f}")
     md_lines.append("")

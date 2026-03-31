@@ -92,7 +92,7 @@ def test_structure_document_calls_anthropic_and_loads_prompts(
 ) -> None:
     mocker.patch("pulp.structure._Anthropic", _DummyAnthropic)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    monkeypatch.delenv("PULP_ANTHROPIC_MODEL", raising=False)
+    monkeypatch.setenv("PULP_ANTHROPIC_MODEL", "claude-3-haiku-20240307")
 
     cleaned = _cleaning_result(
         pages=[

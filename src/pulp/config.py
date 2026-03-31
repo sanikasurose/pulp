@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     anthropic_model: str = Field(
-        default="claude-3-haiku-20240307", validation_alias="PULP_ANTHROPIC_MODEL"
+        default="claude-haiku-4-5-20251001", validation_alias="PULP_ANTHROPIC_MODEL"
     )
 
     llm_enabled_default: bool = False
