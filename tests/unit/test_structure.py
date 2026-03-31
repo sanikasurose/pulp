@@ -89,6 +89,7 @@ def test_structure_document_calls_anthropic_and_loads_prompts(
 ) -> None:
     mocker.patch("pulp.structure._Anthropic", _DummyAnthropic)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.delenv("PULP_ANTHROPIC_MODEL", raising=False)
 
     cleaned = _cleaning_result(
         pages=[
@@ -105,6 +106,7 @@ def test_structure_document_calls_anthropic_and_loads_prompts(
     assert used.api_key == "test-key"
     assert len(used.messages.calls) == 1
     call = used.messages.calls[0]
+    assert call.get("model") == "claude-3-haiku-20240307"
 
     # Verify prompt templates were loaded and included.
     prompts_dir = Path(__file__).resolve().parents[2] / "src" / "pulp" / "prompts"

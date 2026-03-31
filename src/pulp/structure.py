@@ -51,7 +51,7 @@ def structure_document(
 
     user_text = _format_cleaned_for_llm(cleaned)
 
-    model = os.getenv("PULP_ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
+    model = os.getenv("PULP_ANTHROPIC_MODEL", "claude-3-haiku-20240307")
 
     try:
         client = _Anthropic(api_key=settings.anthropic_api_key)
