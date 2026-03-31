@@ -20,4 +20,3 @@ class Settings(BaseSettings):
     detect_sample_pages: int = 3
     scanned_chars_threshold: int = 50
     ocr_low_confidence_threshold: float = 80.0
-
