@@ -6,8 +6,8 @@ from pathlib import Path
 
 import typer
 
-from pulp.config import Settings
 from pulp.clean import clean_extraction
+from pulp.config import Settings
 from pulp.detect import detect_pdf
 from pulp.extract import extract_pdf
 from pulp.models import ColumnsMode

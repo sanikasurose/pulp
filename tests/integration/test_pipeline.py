@@ -5,13 +5,13 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from cli import app
 from pulp.clean import clean_extraction
 from pulp.config import Settings
 from pulp.detect import detect_pdf
 from pulp.extract import extract_pdf
 from pulp.models import ColumnsMode
 from pulp.render import build_structured_doc, render_markdown
-from cli import app
 
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 PDFS_DIR = FIXTURES_DIR / "pdfs"

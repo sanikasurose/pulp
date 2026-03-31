@@ -48,7 +48,9 @@ def test_extract_pdf_columns_auto_orders_two_column_reasonably() -> None:
     assert "Left column line four has words\n\nRight column line one has words" not in text_off
 
 
-def test_extract_pdf_force_ocr_uses_mocked_tesseract_and_populates_confidence(mocker: pytest.MockFixture) -> None:
+def test_extract_pdf_force_ocr_uses_mocked_tesseract_and_populates_confidence(
+    mocker: pytest.MockFixture,
+) -> None:
     input_pdf = PDFS_DIR / "simple_noise.pdf"
     detection = detect_pdf(input_pdf, settings=Settings())
     assert detection.meta.classification == DocumentClassification.TEXT_LAYER

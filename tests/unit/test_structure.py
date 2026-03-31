@@ -71,7 +71,7 @@ class _DummyMessages:
 
 
 class _DummyAnthropic:
-    last_instance: "_DummyAnthropic | None" = None
+    last_instance: _DummyAnthropic | None = None
 
     def __init__(self, *, api_key: str) -> None:
         self.api_key = api_key
@@ -102,12 +102,9 @@ def test_structure_document_calls_anthropic_and_loads_prompts(
     call = used.messages.calls[0]
 
     # Verify prompt templates were loaded and included.
-    heading = (Path(__file__).resolve().parents[2] / "src" / "pulp" / "prompts" / "heading_v1.txt").read_text(
-        encoding="utf-8"
-    )
-    structure = (Path(__file__).resolve().parents[2] / "src" / "pulp" / "prompts" / "structure_v1.txt").read_text(
-        encoding="utf-8"
-    )
+    prompts_dir = Path(__file__).resolve().parents[2] / "src" / "pulp" / "prompts"
+    heading = (prompts_dir / "heading_v1.txt").read_text(encoding="utf-8")
+    structure = (prompts_dir / "structure_v1.txt").read_text(encoding="utf-8")
     assert heading.strip() in str(call.get("system", ""))
     assert structure.strip() in str(call.get("system", ""))
 
