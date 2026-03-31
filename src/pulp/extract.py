@@ -21,17 +21,8 @@ def extract_pdf(
     input_pdf = Path(input_pdf)
 
     if settings.force_ocr or detection.meta.classification == DocumentClassification.SCANNED:
-        pages = [
-            ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None)
-            for i in range(detection.meta.page_count)
-        ]
-        return ExtractionResult(
-            meta=detection.meta,
-            pages=pages,
-            warnings=[
-                "OCR extraction not implemented for scanned PDFs; returning empty text.",
-            ],
-        )
+        pages, warnings = _extract_pdf_ocr(input_pdf, page_count=detection.meta.page_count, settings=settings)
+        return ExtractionResult(meta=detection.meta, pages=pages, warnings=warnings)
 
     warnings: list[str] = []
     pages: list[ExtractedPage] = []
@@ -48,6 +39,90 @@ def extract_pdf(
     _attempt_camelot_tables(input_pdf, warnings=warnings)
 
     return ExtractionResult(meta=detection.meta, pages=pages, warnings=warnings)
+
+
+def _extract_pdf_ocr(
+    input_pdf: Path, *, page_count: int, settings: Settings
+) -> tuple[list[ExtractedPage], list[str]]:
+    warnings: list[str] = []
+    pages: list[ExtractedPage] = []
+
+    try:
+        from pdf2image import convert_from_path
+    except Exception as exc:  # noqa: BLE001
+        warnings.append(f"OCR unavailable: pdf2image import failed ({exc.__class__.__name__}).")
+        pages = [ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None) for i in range(page_count)]
+        return pages, warnings
+
+    try:
+        import pytesseract
+    except Exception as exc:  # noqa: BLE001
+        warnings.append(f"OCR unavailable: pytesseract import failed ({exc.__class__.__name__}).")
+        pages = [ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None) for i in range(page_count)]
+        return pages, warnings
+
+    try:
+        images = convert_from_path(str(input_pdf), dpi=200, thread_count=1)
+    except Exception as exc:  # noqa: BLE001
+        warnings.append(f"OCR page rendering failed ({exc.__class__.__name__}).")
+        pages = [ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None) for i in range(page_count)]
+        return pages, warnings
+
+    for i in range(page_count):
+        page_number = i + 1
+        if i >= len(images):
+            warnings.append(f"OCR missing rendered image for page {page_number}.")
+            pages.append(ExtractedPage(page_number=page_number, raw_text="", ocr_confidence=None))
+            continue
+
+        image = images[i]
+
+        try:
+            text = pytesseract.image_to_string(image) or ""
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"OCR failed for page {page_number} ({exc.__class__.__name__}).")
+            pages.append(ExtractedPage(page_number=page_number, raw_text="", ocr_confidence=None))
+            continue
+
+        confidence: float | None = None
+        try:
+            data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
+            confidence = _ocr_confidence_from_data(data)
+        except Exception:  # noqa: BLE001
+            confidence = None
+
+        if confidence is not None and confidence < float(settings.ocr_low_confidence_threshold):
+            warnings.append(
+                f"Low OCR confidence on page {page_number} (avg={confidence:.1f})."
+            )
+
+        pages.append(ExtractedPage(page_number=page_number, raw_text=text, ocr_confidence=confidence))
+
+    return pages, warnings
+
+
+def _ocr_confidence_from_data(data: object) -> float | None:
+    if not isinstance(data, dict):
+        return None
+    confs = data.get("conf")
+    if not isinstance(confs, list):
+        return None
+
+    values: list[float] = []
+    for v in confs:
+        try:
+            fv = float(v)
+        except Exception:  # noqa: BLE001
+            continue
+        if fv < 0:
+            continue
+        if fv > 100:
+            continue
+        values.append(fv)
+
+    if not values:
+        return None
+    return sum(values) / float(len(values))
 
 
 def _attempt_camelot_tables(input_pdf: Path, *, warnings: list[str]) -> None:
