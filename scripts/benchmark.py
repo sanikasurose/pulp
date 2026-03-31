@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import tempfile
 import time
@@ -34,6 +35,8 @@ def _format_md_table(rows: list[dict[str, Any]]) -> str:
         "input_bytes",
         "input_tokens",
         "output_tokens",
+        "token_reduction_pct",
+        "structure_accuracy",
         "warnings",
         "runtime_s",
     ]
@@ -47,6 +50,17 @@ def _format_md_table(rows: list[dict[str, Any]]) -> str:
     for row in rows:
         body.append("| " + " | ".join(fmt(row.get(h)) for h in headers) + " |")
     return "\n".join(body) + "\n"
+
+
+def _token_reduction_pct(*, input_tokens: int, output_tokens: int) -> float | None:
+    if input_tokens <= 0:
+        return None
+    return 100.0 * (1.0 - (float(output_tokens) / float(input_tokens)))
+
+
+def _snapshot_accuracy_pct(*, expected: str, got: str) -> float:
+    # Deterministic proxy metric: true structure accuracy is a manual-review measure.
+    return 100.0 * difflib.SequenceMatcher(a=expected, b=got).ratio()
 
 
 def run_benchmark(
@@ -72,6 +86,8 @@ def run_benchmark(
     settings = Settings()
     settings.strict_llm = bool(settings.strict_llm or strict_llm)
     settings.force_ocr = bool(settings.force_ocr or force_ocr)
+
+    expected_dir = fixtures_dir.parent / "expected"
 
     rows: list[dict[str, Any]] = []
     failures: list[str] = []
@@ -120,6 +136,10 @@ def run_benchmark(
             )
             input_tokens = len(enc.encode(raw_input_text))
             output_tokens = len(enc.encode(output_text))
+            token_reduction_pct = _token_reduction_pct(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
 
             runtime_s = end - start
             file_size = pdf_path.stat().st_size
@@ -132,6 +152,15 @@ def run_benchmark(
                 page_count = 0
             warning_count = int(len(getattr(structured, "warnings", []) or [])) if structured else 0
 
+            structure_accuracy = None
+            expected_path = expected_dir / f"{pdf_path.stem}.md"
+            if (not llm_enabled) and expected_path.exists() and output_text:
+                expected_text = expected_path.read_text(encoding="utf-8")
+                structure_accuracy = _snapshot_accuracy_pct(
+                    expected=expected_text,
+                    got=output_text,
+                )
+
             row = {
                 "document": pdf_path.name,
                 "classification": classification,
@@ -139,6 +168,12 @@ def run_benchmark(
                 "input_bytes": file_size,
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
+                "token_reduction_pct": (
+                    f"{token_reduction_pct:.1f}" if token_reduction_pct is not None else ""
+                ),
+                "structure_accuracy": (
+                    f"{structure_accuracy:.1f}" if structure_accuracy is not None else ""
+                ),
                 "warnings": warning_count,
                 "runtime_s": f"{runtime_s:.3f}",
             }
@@ -165,6 +200,12 @@ def run_benchmark(
     md_lines.append(f"- total_input: {total_input_bytes} ({_human_bytes(total_input_bytes)})")
     md_lines.append(f"- total_input_tokens: {totals['input_tokens']}")
     md_lines.append(f"- total_output_tokens: {totals['output_tokens']}")
+    total_reduction = _token_reduction_pct(
+        input_tokens=int(totals["input_tokens"]),
+        output_tokens=int(totals["output_tokens"]),
+    )
+    if total_reduction is not None:
+        md_lines.append(f"- token_reduction_pct: {total_reduction:.1f}")
     md_lines.append(f"- total_warnings: {totals['warnings']}")
     md_lines.append(f"- total_runtime_s: {totals['runtime_s']:.3f}")
     md_lines.append("")
@@ -179,6 +220,14 @@ def run_benchmark(
         for failure in failures:
             md_lines.append(f"- {failure}")
         md_lines.append("")
+
+    md_lines.append("## Notes")
+    md_lines.append("")
+    md_lines.append(
+        "- `structure_accuracy` is a deterministic snapshot similarity proxy when an expected "
+        "Markdown file exists and `--llm` is disabled; it is not a semantic heading-accuracy score."
+    )
+    md_lines.append("")
 
     output_path.write_text("\n".join(md_lines).rstrip() + "\n", encoding="utf-8")
 
