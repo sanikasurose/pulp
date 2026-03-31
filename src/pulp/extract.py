@@ -70,7 +70,7 @@ def _extract_pdf_ocr(
         return pages, warnings
 
     try:
-        images = convert_from_path(str(input_pdf), dpi=200, thread_count=1)
+        images = convert_from_path(str(input_pdf), dpi=300, thread_count=1)
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"OCR page rendering failed ({exc.__class__.__name__}).")
         pages = [
