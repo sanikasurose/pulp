@@ -127,6 +127,57 @@ def test_structure_document_calls_anthropic_and_loads_prompts(
     assert user_content.index("Alpha") < user_content.index("Beta")
 
 
+@dataclasses.dataclass
+class _SeqResponse:
+    content: list[_DummyBlock]
+
+
+class _SeqMessages:
+    def __init__(self, texts: list[str]) -> None:
+        self._texts = list(texts)
+        self.calls: list[dict] = []
+
+    def create(self, **kwargs: object) -> object:
+        self.calls.append(kwargs)
+        text = self._texts.pop(0) if self._texts else ""
+        return _SeqResponse(content=[_DummyBlock(text=text)])
+
+
+class _SeqAnthropic:
+    last_instance: _SeqAnthropic | None = None
+
+    def __init__(self, *, api_key: str) -> None:  # noqa: ARG002
+        self.messages = _SeqMessages(["OUT1", "OUT2"])
+        _SeqAnthropic.last_instance = self
+
+
+def test_structure_document_chunks_into_multiple_calls(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("PULP_ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+    monkeypatch.setattr(structure_mod, "_Anthropic", _SeqAnthropic)
+    monkeypatch.setattr(structure_mod, "_LLM_CHUNK_MAX_TOKENS", 4)
+    monkeypatch.setattr(structure_mod, "_estimate_tokens", lambda _: 2)
+
+    cleaned = _cleaning_result(
+        pages=[
+            CleanedPage(page_number=1, clean_text="A", warnings=[]),
+            CleanedPage(page_number=2, clean_text="B", warnings=[]),
+            CleanedPage(page_number=3, clean_text="C", warnings=[]),
+        ]
+    )
+    doc = structure_mod.structure_document(cleaned, settings=Settings(), llm_enabled=True)
+    assert doc.markdown == "OUT1\n\nOUT2\n"
+
+    used = _SeqAnthropic.last_instance
+    assert used is not None
+    assert len(used.messages.calls) == 2
+    first_user = used.messages.calls[0]["messages"][0]["content"]
+    second_user = used.messages.calls[1]["messages"][0]["content"]
+    assert "--- Page 1 ---" in first_user
+    assert "--- Page 2 ---" in first_user
+    assert "--- Page 3 ---" in second_user
+
+
 def test_structure_document_anthropic_import_failure_sets_client_none_and_falls_back(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

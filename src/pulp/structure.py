@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from pulp.config import Settings
-from pulp.models import CleaningResult, StructuredDoc
+from pulp.models import CleanedPage, CleaningResult, StructuredDoc
 from pulp.render import build_structured_doc
 
 
@@ -12,6 +12,7 @@ class LLMStructuringError(RuntimeError):
 
 
 _PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+_LLM_CHUNK_MAX_TOKENS = 4000
 
 try:
     from anthropic import Anthropic as _Anthropic  # type: ignore
@@ -48,28 +49,43 @@ def structure_document(
     structure_prompt = _load_prompt("structure_v1.txt")
     system_prompt = f"{heading_prompt}\n\n{structure_prompt}".strip()
 
-    user_text = _format_cleaned_for_llm(cleaned)
-
     model = settings.anthropic_model
 
     try:
         client = _Anthropic(api_key=settings.anthropic_api_key)
-        response = client.messages.create(
-            model=model,
-            max_tokens=4096,
-            temperature=0,
-            system=system_prompt,
-            messages=[
-                {
-                    "role": "user",
-                    "content": user_text,
-                }
-            ],
-        )
-        markdown = _anthropic_response_text(response).strip()
+
+        chunks = _chunk_cleaned_pages(cleaned.pages, max_tokens=_LLM_CHUNK_MAX_TOKENS)
+        if not chunks:
+            return heuristic
+
+        outputs: list[str] = []
+        for chunk_pages in chunks:
+            chunk_text = _format_pages_for_llm(chunk_pages)
+            response = client.messages.create(
+                model=model,
+                max_tokens=4096,
+                temperature=0,
+                system=system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": chunk_text,
+                    }
+                ],
+            )
+            chunk_md = _anthropic_response_text(response).strip()
+            if chunk_md:
+                outputs.append(chunk_md)
+
+        markdown = "\n\n".join(outputs).strip()
         if markdown and not markdown.endswith("\n"):
             markdown += "\n"
-        return StructuredDoc(meta=cleaned.meta, markdown=markdown, warnings=list(cleaned.warnings))
+
+        return StructuredDoc(
+            meta=cleaned.meta,
+            markdown=markdown,
+            warnings=list(cleaned.warnings),
+        )
     except Exception as exc:  # noqa: BLE001
         msg = f"LLM structuring failed ({exc.__class__.__name__})."
         if settings.strict_llm:
@@ -84,11 +100,53 @@ def _load_prompt(filename: str) -> str:
 
 
 def _format_cleaned_for_llm(cleaned: CleaningResult) -> str:
+    return _format_pages_for_llm(cleaned.pages)
+
+
+def _format_pages_for_llm(pages: list[CleanedPage]) -> str:
     parts: list[str] = []
-    for page in cleaned.pages:
+    for page in pages:
         text = (page.clean_text or "").strip()
         parts.append(f"--- Page {page.page_number} ---\n{text}".strip())
     return "\n\n".join(parts).strip()
+
+
+def _chunk_cleaned_pages(
+    pages: list[CleanedPage],
+    *,
+    max_tokens: int,
+) -> list[list[CleanedPage]]:
+    chunks: list[list[CleanedPage]] = []
+    current: list[CleanedPage] = []
+    current_tokens = 0
+
+    for page in pages:
+        page_text = f"--- Page {page.page_number} ---\n{(page.clean_text or '').strip()}".strip()
+        page_tokens = _estimate_tokens(page_text)
+
+        if current and (current_tokens + page_tokens) > max_tokens:
+            chunks.append(current)
+            current = []
+            current_tokens = 0
+
+        current.append(page)
+        current_tokens += page_tokens
+
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _estimate_tokens(text: str) -> int:
+    text = text or ""
+    try:
+        import tiktoken
+
+        enc = tiktoken.get_encoding("cl100k_base")
+        return len(enc.encode(text))
+    except Exception:  # noqa: BLE001
+        # Deterministic fallback: rough chars->tokens approximation.
+        return max(1, len(text) // 4)
 
 
 def _anthropic_response_text(response: object) -> str:

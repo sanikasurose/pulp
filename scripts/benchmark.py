@@ -115,7 +115,9 @@ def run_benchmark(
                 detection = None
             end = time.perf_counter()
 
-            raw_input_text = "\n".join(p.raw_text for p in extraction.pages) if extraction is not None else ""
+            raw_input_text = (
+                "\n".join(p.raw_text for p in extraction.pages) if extraction is not None else ""
+            )
             input_tokens = len(enc.encode(raw_input_text))
             output_tokens = len(enc.encode(output_text))
 
