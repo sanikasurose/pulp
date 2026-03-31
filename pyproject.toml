@@ -18,6 +18,9 @@ dependencies = [
   "typer",
 ]
 
+[project.scripts]
+pulp = "pulp.cli:app"
+
 [dependency-groups]
 dev = [
   "pytest",
@@ -47,4 +50,3 @@ select = ["E", "F", "I", "UP"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
-

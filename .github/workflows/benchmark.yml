@@ -1,21 +1,36 @@
 name: benchmark
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   benchmark:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ghostscript \
+            poppler-utils \
+            tesseract-ocr \
+            tesseract-ocr-eng
       - name: Install
-        run: uv sync --group dev
+        run: uv sync --frozen --group dev
       - name: Run benchmark
-        run: echo "Benchmark scaffold only; implemented by subsequent agents."
-
+        run: uv run python scripts/benchmark.py --fixtures-dir tests/fixtures/pdfs --output benchmark_report.md --json-output benchmark.json
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark
+          path: |
+            benchmark_report.md
+            benchmark.json

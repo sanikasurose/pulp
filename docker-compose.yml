@@ -2,9 +2,17 @@ services:
   pulp:
     build: .
     volumes:
-      - ./:/app
-      - ./data:/docs
+      - ./data:/data
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    command: /docs/input.pdf -o /docs/output.md --diff
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      PULP_ANTHROPIC_MODEL: ${PULP_ANTHROPIC_MODEL:-}
+    command: ["/data/input.pdf", "-o", "/data/output.md", "--diff", "--no-llm"]
 
+  pulp-ocr:
+    build: .
+    volumes:
+      - ./data:/data
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      PULP_ANTHROPIC_MODEL: ${PULP_ANTHROPIC_MODEL:-}
+    command: ["/data/input.pdf", "-o", "/data/output_ocr.md", "--diff", "--no-llm", "--force-ocr"]
