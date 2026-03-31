@@ -1,0 +1,21 @@
+name: benchmark
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v3
+      - name: Install
+        run: uv sync --group dev
+      - name: Run benchmark
+        run: echo "Benchmark scaffold only; implemented by subsequent agents."
+
