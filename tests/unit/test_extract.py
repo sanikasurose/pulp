@@ -7,7 +7,6 @@ from pulp.detect import detect_pdf
 from pulp.extract import extract_pdf
 from pulp.models import ColumnsMode, DocumentClassification
 
-
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 PDFS_DIR = FIXTURES_DIR / "pdfs"
 
@@ -29,11 +28,15 @@ def test_extract_pdf_columns_auto_orders_two_column_reasonably() -> None:
 
     detection = detect_pdf(input_pdf, settings=Settings())
 
-    extraction_off = extract_pdf(input_pdf, detection, settings=Settings(columns_mode=ColumnsMode.OFF))
+    extraction_off = extract_pdf(
+        input_pdf, detection, settings=Settings(columns_mode=ColumnsMode.OFF)
+    )
     text_off = extraction_off.pages[0].raw_text
     assert text_off
 
-    extraction_auto = extract_pdf(input_pdf, detection, settings=Settings(columns_mode=ColumnsMode.AUTO))
+    extraction_auto = extract_pdf(
+        input_pdf, detection, settings=Settings(columns_mode=ColumnsMode.AUTO)
+    )
     text_auto = extraction_auto.pages[0].raw_text
     assert text_auto
 

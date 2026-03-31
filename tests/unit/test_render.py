@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pulp.models import CleanedPage, CleaningResult, DocumentClassification, DocumentMeta, StructuredDoc
+from pulp.models import (
+    CleanedPage,
+    CleaningResult,
+    DocumentClassification,
+    DocumentMeta,
+    StructuredDoc,
+)
 from pulp.render import build_structured_doc, render_markdown
 
 

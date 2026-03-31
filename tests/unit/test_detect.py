@@ -8,7 +8,6 @@ from pulp.config import Settings
 from pulp.detect import detect_pdf
 from pulp.models import DocumentClassification
 
-
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 PDFS_DIR = FIXTURES_DIR / "pdfs"
 

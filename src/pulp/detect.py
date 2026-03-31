@@ -41,7 +41,11 @@ def detect_pdf(input_pdf: Path, *, settings: Settings) -> DetectionResult:
         language=None,
     )
 
-    return DetectionResult(meta=meta, sampled_pages=len(sampled_indices), avg_chars_per_page=avg_chars_per_page)
+    return DetectionResult(
+        meta=meta,
+        sampled_pages=len(sampled_indices),
+        avg_chars_per_page=avg_chars_per_page,
+    )
 
 
 def _sample_page_indices(page_count: int, sample_pages: int) -> list[int]:

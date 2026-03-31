@@ -39,7 +39,9 @@ def clean_extraction(extraction: ExtractionResult, *, settings: Settings) -> Cle
             stats.dropped_blank_pages += 1
             continue
 
-        cleaned_pages.append(CleanedPage(page_number=page.page_number, clean_text=text, warnings=[]))
+        cleaned_pages.append(
+            CleanedPage(page_number=page.page_number, clean_text=text, warnings=[])
+        )
 
     _reassemble_across_pages(cleaned_pages, stats=stats)
 

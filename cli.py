@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from importlib import metadata
 from pathlib import Path
-from typing import Optional
 
 import typer
 
 from pulp.config import Settings
 from pulp.models import ColumnsMode
 
-
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 
 
-class _ColumnsChoice(str, Enum):
+class _ColumnsChoice(StrEnum):
     auto = "auto"
     off = "off"
 
@@ -47,7 +45,7 @@ def pulp_command(
         is_eager=True,
         help="Show the version and exit.",
     ),
-    output: Optional[Path] = typer.Option(
+    output: Path | None = typer.Option(
         None,
         "-o",
         "--output",
@@ -64,7 +62,7 @@ def pulp_command(
         "--verbose",
         help="Enable detailed per-stage logging (metadata only).",
     ),
-    llm: Optional[bool] = typer.Option(
+    llm: bool | None = typer.Option(
         None,
         "--llm/--no-llm",
         help="Enable/disable the optional LLM structuring stage (default: off).",

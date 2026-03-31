@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class DocumentClassification(str, Enum):
+class DocumentClassification(StrEnum):
     TEXT_LAYER = "TEXT_LAYER"
     SCANNED = "SCANNED"
 
 
-class ColumnsMode(str, Enum):
+class ColumnsMode(StrEnum):
     AUTO = "auto"
     OFF = "off"
 
@@ -66,4 +66,3 @@ class StructuredDoc(BaseModel):
     meta: DocumentMeta
     markdown: str
     warnings: list[str] = Field(default_factory=list)
-

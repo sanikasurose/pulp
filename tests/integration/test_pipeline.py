@@ -11,7 +11,6 @@ from pulp.extract import extract_pdf
 from pulp.models import ColumnsMode
 from pulp.render import build_structured_doc, render_markdown
 
-
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 PDFS_DIR = FIXTURES_DIR / "pdfs"
 EXPECTED_DIR = FIXTURES_DIR / "expected"

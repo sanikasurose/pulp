@@ -14,7 +14,9 @@ from pulp.models import (
 )
 
 
-def extract_pdf(input_pdf: Path, detection: DetectionResult, *, settings: Settings) -> ExtractionResult:
+def extract_pdf(
+    input_pdf: Path, detection: DetectionResult, *, settings: Settings
+) -> ExtractionResult:
     """Extract raw text (text-layer) or OCR text (scanned) from a PDF."""
     input_pdf = Path(input_pdf)
 
@@ -100,7 +102,11 @@ def _extract_page_columns_auto(page: pdfplumber.page.Page) -> str:
     left_words = [w for w in words if float(w.get("x0", 0.0)) < midpoint]
     right_words = [w for w in words if float(w.get("x0", 0.0)) >= midpoint]
 
-    if not _looks_two_column(page_width=float(page.width), left_words=left_words, right_words=right_words):
+    if not _looks_two_column(
+        page_width=float(page.width),
+        left_words=left_words,
+        right_words=right_words,
+    ):
         return page.extract_text() or ""
 
     left_text = _words_to_text(left_words)
@@ -111,7 +117,9 @@ def _extract_page_columns_auto(page: pdfplumber.page.Page) -> str:
     return left_text or right_text or (page.extract_text() or "")
 
 
-def _looks_two_column(*, page_width: float, left_words: list[dict], right_words: list[dict]) -> bool:
+def _looks_two_column(
+    *, page_width: float, left_words: list[dict], right_words: list[dict]
+) -> bool:
     total = len(left_words) + len(right_words)
     if total < 30:
         return False
