@@ -39,18 +39,14 @@ def test_structure_document_llm_disabled_is_deterministic_heuristic() -> None:
 
 
 def test_structure_document_missing_api_key_falls_back_when_not_strict() -> None:
-    cleaned = _cleaning_result(
-        pages=[CleanedPage(page_number=1, clean_text="Hi", warnings=[])]
-    )
+    cleaned = _cleaning_result(pages=[CleanedPage(page_number=1, clean_text="Hi", warnings=[])])
     doc = structure_document(cleaned, settings=Settings(), llm_enabled=True)
     assert doc.markdown == "Hi\n"
     assert any("ANTHROPIC_API_KEY" in w for w in doc.warnings)
 
 
 def test_structure_document_missing_api_key_raises_when_strict() -> None:
-    cleaned = _cleaning_result(
-        pages=[CleanedPage(page_number=1, clean_text="Hi", warnings=[])]
-    )
+    cleaned = _cleaning_result(pages=[CleanedPage(page_number=1, clean_text="Hi", warnings=[])])
     with pytest.raises(LLMStructuringError):
         structure_document(
             cleaned,
@@ -84,9 +80,7 @@ class _DummyAnthropic:
 
     def __init__(self, *, api_key: str) -> None:
         self.api_key = api_key
-        self.messages = _DummyMessages(
-            _DummyResponse(content=[_DummyBlock(text="OUT")])
-        )
+        self.messages = _DummyMessages(_DummyResponse(content=[_DummyBlock(text="OUT")]))
         _DummyAnthropic.last_instance = self
 
 

@@ -66,7 +66,7 @@ def test_extract_pdf_force_ocr_uses_mocked_tesseract_and_populates_confidence(
     mocker.patch("pdf2image.convert_from_path", return_value=fake_images)
     mocker.patch(
         "pytesseract.image_to_string",
-        side_effect=[f"page {i+1} text" for i in range(page_count)],
+        side_effect=[f"page {i + 1} text" for i in range(page_count)],
     )
     mocker.patch(
         "pytesseract.image_to_data",

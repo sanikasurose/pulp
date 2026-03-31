@@ -36,9 +36,7 @@ def extract_pdf(
             else:
                 raw_text = _extract_page_columns_auto(page)
 
-            pages.append(
-                ExtractedPage(page_number=i + 1, raw_text=raw_text, ocr_confidence=None)
-            )
+            pages.append(ExtractedPage(page_number=i + 1, raw_text=raw_text, ocr_confidence=None))
 
     _attempt_camelot_tables(input_pdf, warnings=warnings)
 
@@ -105,9 +103,7 @@ def _extract_pdf_ocr(
             confidence = None
 
         if confidence is not None and confidence < float(settings.ocr_low_confidence_threshold):
-            warnings.append(
-                f"Low OCR confidence on page {page_number} (avg={confidence:.1f})."
-            )
+            warnings.append(f"Low OCR confidence on page {page_number} (avg={confidence:.1f}).")
 
         pages.append(
             ExtractedPage(page_number=page_number, raw_text=text, ocr_confidence=confidence)

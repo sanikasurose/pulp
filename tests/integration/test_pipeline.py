@@ -63,7 +63,7 @@ def test_pipeline_end_to_end_force_ocr_is_deterministic_with_mocks(
     mocker.patch("pdf2image.convert_from_path", return_value=fake_images)
     mocker.patch(
         "pytesseract.image_to_string",
-        side_effect=[f"OCR page {i+1} content is here." for i in range(page_count)],
+        side_effect=[f"OCR page {i + 1} content is here." for i in range(page_count)],
     )
     mocker.patch("pytesseract.image_to_data", return_value={"conf": ["90"]})
 
