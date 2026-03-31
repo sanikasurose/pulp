@@ -21,7 +21,9 @@ def extract_pdf(
     input_pdf = Path(input_pdf)
 
     if settings.force_ocr or detection.meta.classification == DocumentClassification.SCANNED:
-        pages, warnings = _extract_pdf_ocr(input_pdf, page_count=detection.meta.page_count, settings=settings)
+        pages, warnings = _extract_pdf_ocr(
+            input_pdf, page_count=detection.meta.page_count, settings=settings
+        )
         return ExtractionResult(meta=detection.meta, pages=pages, warnings=warnings)
 
     warnings: list[str] = []
@@ -34,7 +36,9 @@ def extract_pdf(
             else:
                 raw_text = _extract_page_columns_auto(page)
 
-            pages.append(ExtractedPage(page_number=i + 1, raw_text=raw_text, ocr_confidence=None))
+            pages.append(
+                ExtractedPage(page_number=i + 1, raw_text=raw_text, ocr_confidence=None)
+            )
 
     _attempt_camelot_tables(input_pdf, warnings=warnings)
 
@@ -51,21 +55,30 @@ def _extract_pdf_ocr(
         from pdf2image import convert_from_path
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"OCR unavailable: pdf2image import failed ({exc.__class__.__name__}).")
-        pages = [ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None) for i in range(page_count)]
+        pages = [
+            ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None)
+            for i in range(page_count)
+        ]
         return pages, warnings
 
     try:
         import pytesseract
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"OCR unavailable: pytesseract import failed ({exc.__class__.__name__}).")
-        pages = [ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None) for i in range(page_count)]
+        pages = [
+            ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None)
+            for i in range(page_count)
+        ]
         return pages, warnings
 
     try:
         images = convert_from_path(str(input_pdf), dpi=200, thread_count=1)
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"OCR page rendering failed ({exc.__class__.__name__}).")
-        pages = [ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None) for i in range(page_count)]
+        pages = [
+            ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None)
+            for i in range(page_count)
+        ]
         return pages, warnings
 
     for i in range(page_count):
@@ -96,7 +109,9 @@ def _extract_pdf_ocr(
                 f"Low OCR confidence on page {page_number} (avg={confidence:.1f})."
             )
 
-        pages.append(ExtractedPage(page_number=page_number, raw_text=text, ocr_confidence=confidence))
+        pages.append(
+            ExtractedPage(page_number=page_number, raw_text=text, ocr_confidence=confidence)
+        )
 
     return pages, warnings
 
