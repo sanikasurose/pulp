@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import sys
 from enum import StrEnum
 from importlib import metadata
 from pathlib import Path
 
 import typer
+from loguru import logger
 
 from pulp.clean import clean_extraction
 from pulp.config import Settings
@@ -143,18 +145,55 @@ def pulp_command(
     settings.force_ocr = effective_force_ocr
     settings.columns_mode = effective_columns_mode
 
-    detection = detect_pdf(input_pdf, settings=settings)
-    extraction = extract_pdf(input_pdf, detection, settings=settings)
-    cleaned = clean_extraction(extraction, settings=settings)
+    # Loguru: disabled by default; --verbose enables structured metadata logging to stderr.
+    logger.remove()
+    if verbose:
+        _fmt = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | {message}"
+        logger.add(sys.stderr, level="DEBUG", format=_fmt)
 
+    logger.debug("stage=detect input={}", input_pdf)
+    detection = detect_pdf(input_pdf, settings=settings)
+    logger.debug(
+        "stage=detect classification={} page_count={} avg_chars={:.1f}",
+        detection.meta.classification,
+        detection.meta.page_count,
+        detection.avg_chars_per_page,
+    )
+
+    logger.debug("stage=extract classification={}", detection.meta.classification)
+    extraction = extract_pdf(input_pdf, detection, settings=settings)
+    logger.debug(
+        "stage=extract pages={} warnings={}",
+        len(extraction.pages),
+        len(extraction.warnings),
+    )
+
+    logger.debug("stage=clean pages={}", len(extraction.pages))
+    cleaned = clean_extraction(extraction, settings=settings)
+    logger.debug(
+        "stage=clean kept={} pn={} hf={} hyph={} para={} blank={}",
+        len(cleaned.pages),
+        cleaned.stats.removed_page_number_lines,
+        cleaned.stats.removed_header_footer_lines,
+        cleaned.stats.rejoined_hyphenations,
+        cleaned.stats.reassembled_paragraphs,
+        cleaned.stats.dropped_blank_pages,
+    )
+
+    logger.debug("stage=structure llm_enabled={}", effective_llm)
     try:
         structured = structure_document(cleaned, settings=settings, llm_enabled=effective_llm)
     except LLMStructuringError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=4) from exc
+    logger.debug(
+        "stage=structure warnings={}",
+        len(structured.warnings),
+    )
 
     output_path = output or input_pdf.with_suffix(".md")
     render_markdown(structured, output_path=output_path)
+    logger.debug("stage=render output={}", output_path)
 
     if diff:
         summary = _format_diff_summary(
@@ -165,10 +204,6 @@ def pulp_command(
             llm_enabled=effective_llm,
         )
         typer.echo(summary, err=True)
-
-    if verbose:
-        # Metadata-only: avoid printing document text.
-        typer.echo(f"Wrote {output_path}", err=True)
 
 
 if __name__ == "__main__":

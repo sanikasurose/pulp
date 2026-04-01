@@ -119,3 +119,60 @@ def test_extract_pdf_ocr_confidence_is_optional(mocker: pytest.MockFixture) -> N
     extraction = extract_pdf(input_pdf, detection, settings=Settings(force_ocr=True))
     assert extraction.pages[0].raw_text == "ok"
     assert extraction.pages[0].ocr_confidence is None
+
+
+def test_extract_pdf_ocr_low_confidence_adds_annotation(mocker: pytest.MockFixture) -> None:
+    input_pdf = PDFS_DIR / "simple_noise.pdf"
+    detection = detect_pdf(input_pdf, settings=Settings())
+    page_count = detection.meta.page_count
+    fake_images = [object() for _ in range(page_count)]
+
+    mocker.patch("pdf2image.convert_from_path", return_value=fake_images)
+    mocker.patch("pytesseract.image_to_string", return_value="some extracted text")
+    # Return confidence below the default threshold of 80.
+    mocker.patch("pytesseract.image_to_data", return_value={"conf": ["50", "55", "45"]})
+
+    settings = Settings(force_ocr=True, ocr_low_confidence_threshold=80.0)
+    extraction = extract_pdf(input_pdf, detection, settings=settings)
+
+    page = extraction.pages[0]
+    assert page.ocr_confidence is not None
+    assert page.ocr_confidence < 80.0
+    assert page.raw_text.startswith("[LOW CONFIDENCE:")
+    assert "some extracted text" in page.raw_text
+    assert any("Low OCR confidence" in w for w in extraction.warnings)
+
+
+def test_extract_pdf_ocr_low_confidence_empty_text_annotation(mocker: pytest.MockFixture) -> None:
+    input_pdf = PDFS_DIR / "simple_noise.pdf"
+    detection = detect_pdf(input_pdf, settings=Settings())
+    page_count = detection.meta.page_count
+    fake_images = [object() for _ in range(page_count)]
+
+    mocker.patch("pdf2image.convert_from_path", return_value=fake_images)
+    mocker.patch("pytesseract.image_to_string", return_value="")
+    mocker.patch("pytesseract.image_to_data", return_value={"conf": ["30"]})
+
+    settings = Settings(force_ocr=True, ocr_low_confidence_threshold=80.0)
+    extraction = extract_pdf(input_pdf, detection, settings=settings)
+    assert extraction.pages[0].raw_text.startswith("[LOW CONFIDENCE:")
+
+
+def test_deskew_returns_pil_image() -> None:
+    from pulp.extract import _deskew
+
+    try:
+        from PIL import Image
+    except ImportError:
+        pytest.skip("Pillow not available")
+
+    img = Image.new("L", (200, 200), color=255)
+    result = _deskew(img)
+    assert isinstance(result, Image.Image)
+
+
+def test_deskew_returns_input_unchanged_on_non_image() -> None:
+    from pulp.extract import _deskew
+
+    obj = object()
+    assert _deskew(obj) is obj

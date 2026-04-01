@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/sanikasurose/pulp/actions/workflows/ci.yml/badge.svg)](https://github.com/sanikasurose/pulp/actions/workflows/ci.yml)
 [![Benchmark](https://github.com/sanikasurose/pulp/actions/workflows/benchmark.yml/badge.svg)](https://github.com/sanikasurose/pulp/actions/workflows/benchmark.yml)
+[![codecov](https://codecov.io/gh/sanikasurose/pulp/branch/main/graph/badge.svg)](https://codecov.io/gh/sanikasurose/pulp)
 
 Pulp is a local-first CLI that converts PDFs (text-layer or scanned) into clean, semantically
 structured Markdown suitable for LLM/RAG ingestion.
@@ -62,10 +63,12 @@ uv run python scripts/benchmark.py
 
 Example (from `tests/fixtures/pdfs/`):
 
-| document | classification | page_count | input_bytes | output_chars | warnings | runtime_s |
-| --- | --- | --- | --- | --- | --- | --- |
-| simple_noise.pdf | TEXT_LAYER | 3 | 1557 | 190 | 1 | 0.613 |
-| two_column.pdf | TEXT_LAYER | 1 | 1014 | 287 | 0 | 0.018 |
+| document | classification | page_count | input_bytes | input_tokens | output_tokens | token_reduction_pct | structure_accuracy | warnings | runtime_s |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| simple_noise.pdf | TEXT_LAYER | 3 | 1557 | 78 | 37 | 52.6 | 100.0 | 1 | 0.620 |
+| two_column.pdf | TEXT_LAYER | 1 | 1014 | 60 | 61 | -1.7 | 100.0 | 0 | 0.019 |
+
+`structure_accuracy` is a snapshot similarity score (difflib) against manually verified expected outputs. `token_reduction_pct` is measured with tiktoken `cl100k_base`.
 
 ## Development
 

@@ -104,6 +104,8 @@ def _extract_pdf_ocr(
 
         if confidence is not None and confidence < float(settings.ocr_low_confidence_threshold):
             warnings.append(f"Low OCR confidence on page {page_number} (avg={confidence:.1f}).")
+            annotation = f"[LOW CONFIDENCE: avg={confidence:.1f}]"
+            text = f"{annotation}\n{text}" if text.strip() else annotation
 
         pages.append(
             ExtractedPage(page_number=page_number, raw_text=text, ocr_confidence=confidence)
@@ -128,6 +130,8 @@ def _preprocess_ocr_image(image: object, *, page_number: int, warnings: list[str
         out = ImageEnhance.Contrast(out).enhance(1.6)
         # Autocontrast to stretch values.
         out = ImageOps.autocontrast(out)
+        # Deskew: correct rotational skew via projection profile analysis.
+        out = _deskew(out)
     except Exception as exc:  # noqa: BLE001
         warnings.append(
             f"OCR preprocessing failed for page {page_number} ({exc.__class__.__name__})."
@@ -135,6 +139,53 @@ def _preprocess_ocr_image(image: object, *, page_number: int, warnings: list[str
         return image
 
     return out
+
+
+def _deskew(image: object) -> object:
+    """Rotate image to correct skew using horizontal projection profile analysis."""
+    try:
+        import math
+
+        from PIL import Image
+    except Exception:
+        return image
+
+    if not isinstance(image, Image.Image):
+        return image
+
+    # Work on a small binary thumbnail for speed.
+    thumb = image.copy()
+    thumb.thumbnail((800, 800))
+    binary = thumb.point(lambda x: 0 if x < 128 else 255, "1")
+
+    best_angle = 0.0
+    best_score = -1.0
+
+    # Search ±10° in 0.5° steps — sufficient for typical page skew.
+    for tenth in range(-20, 21):
+        angle = tenth * 0.5
+        rotated = binary.rotate(angle, expand=False, fillcolor=1)
+        width = rotated.width
+        height = rotated.height
+        try:
+            pixel_seq = list(rotated.get_flattened_data())
+        except AttributeError:
+            pixel_seq = list(rotated.getdata())  # type: ignore[attr-defined]
+        row_sums = [
+            sum(1 for x in pixel_seq[r * width : (r + 1) * width] if x == 0) for r in range(height)
+        ]
+        # Maximize variance of row sums: well-aligned text has high variance.
+        mean = sum(row_sums) / max(1, len(row_sums))
+        variance = sum((s - mean) ** 2 for s in row_sums) / max(1, len(row_sums))
+        score = math.sqrt(variance)
+        if score > best_score:
+            best_score = score
+            best_angle = angle
+
+    if abs(best_angle) < 0.5:
+        return image
+
+    return image.rotate(best_angle, expand=True, fillcolor=255)
 
 
 def _ocr_confidence_from_data(data: object) -> float | None:

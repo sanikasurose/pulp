@@ -1,0 +1,43 @@
+{
+  "failures": [],
+  "rows": [
+    {
+      "classification": "TEXT_LAYER",
+      "document": "simple_noise.pdf",
+      "input_bytes": 1557,
+      "input_tokens": 78,
+      "output_tokens": 37,
+      "page_count": 3,
+      "runtime_s": "0.620",
+      "structure_accuracy": "100.0",
+      "token_reduction_pct": "52.6",
+      "warnings": 1
+    },
+    {
+      "classification": "TEXT_LAYER",
+      "document": "two_column.pdf",
+      "input_bytes": 1014,
+      "input_tokens": 60,
+      "output_tokens": 61,
+      "page_count": 1,
+      "runtime_s": "0.019",
+      "structure_accuracy": "100.0",
+      "token_reduction_pct": "-1.7",
+      "warnings": 0
+    }
+  ],
+  "settings": {
+    "force_ocr": false,
+    "llm_enabled": false,
+    "strict_llm": false
+  },
+  "totals": {
+    "docs": 2,
+    "input_bytes": 2571,
+    "input_tokens": 138,
+    "output_tokens": 98,
+    "pages": 4,
+    "runtime_s": 0.63905,
+    "warnings": 1
+  }
+}
