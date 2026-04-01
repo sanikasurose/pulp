@@ -45,3 +45,7 @@ htmlcov/
 .DS_Store
 Thumbs.db
 .idea/
+
+# Local benchmark outputs (regenerate with scripts/benchmark.py)
+benchmark.json
+benchmark_report.md

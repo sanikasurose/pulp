@@ -5,6 +5,7 @@ from enum import StrEnum
 from importlib import metadata
 from pathlib import Path
 
+import tiktoken
 import typer
 from loguru import logger
 
@@ -59,6 +60,16 @@ def _format_diff_summary(*, detection, extraction, cleaned, structured, llm_enab
     fell_back = llm_enabled and any("Using heuristic output." in w for w in structured.warnings)
 
     stats = cleaned.stats
+    enc = tiktoken.get_encoding("cl100k_base")
+    raw_input_text = "\n".join(p.raw_text for p in extraction.pages)
+    input_tokens = len(enc.encode(raw_input_text))
+    output_tokens = len(enc.encode(structured.markdown))
+    if input_tokens <= 0:
+        reduction_line = "tokens.reduction_pct: n/a"
+    else:
+        reduction_pct = 100.0 * (1.0 - (float(output_tokens) / float(input_tokens)))
+        reduction_line = f"tokens.reduction_pct: {reduction_pct:.1f}%"
+
     lines = [
         f"classification: {detection.meta.classification}",
         f"page_count: {detection.meta.page_count}",
@@ -72,6 +83,9 @@ def _format_diff_summary(*, detection, extraction, cleaned, structured, llm_enab
         f"warnings.extract: {len(extraction.warnings)}",
         f"warnings.clean: {len(clean_stage_warnings)}",
         f"warnings.structure: {len(structure_stage_warnings)}",
+        f"tokens.input: {input_tokens}",
+        f"tokens.output: {output_tokens}",
+        reduction_line,
         f"llm.enabled: {str(bool(llm_enabled)).lower()}",
         f"llm.fell_back: {str(bool(fell_back)).lower()}",
     ]

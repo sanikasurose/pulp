@@ -43,17 +43,21 @@ def test_structure_document_llm_disabled_is_deterministic_heuristic() -> None:
 
 def test_structure_document_missing_api_key_falls_back_when_not_strict() -> None:
     cleaned = _cleaning_result(pages=[CleanedPage(page_number=1, clean_text="Hi", warnings=[])])
-    doc = structure_mod.structure_document(cleaned, settings=Settings(), llm_enabled=True)
+    settings = Settings()
+    settings.anthropic_api_key = None
+    doc = structure_mod.structure_document(cleaned, settings=settings, llm_enabled=True)
     assert doc.markdown == "Hi\n"
     assert any("ANTHROPIC_API_KEY" in w for w in doc.warnings)
 
 
 def test_structure_document_missing_api_key_raises_when_strict() -> None:
     cleaned = _cleaning_result(pages=[CleanedPage(page_number=1, clean_text="Hi", warnings=[])])
+    settings = Settings(strict_llm=True)
+    settings.anthropic_api_key = None
     with pytest.raises(structure_mod.LLMStructuringError):
         structure_mod.structure_document(
             cleaned,
-            settings=Settings(strict_llm=True),
+            settings=settings,
             llm_enabled=True,
         )
 
@@ -111,11 +115,9 @@ def test_structure_document_calls_anthropic_and_loads_prompts(
     call = used.messages.calls[0]
     assert call.get("model") == "claude-3-haiku-20240307"
 
-    # Verify prompt templates were loaded and included.
+    # Verify the structure prompt was loaded and used as the system prompt.
     prompts_dir = Path(__file__).resolve().parents[2] / "src" / "pulp" / "prompts"
-    heading = (prompts_dir / "heading_v1.txt").read_text(encoding="utf-8")
     structure = (prompts_dir / "structure_v1.txt").read_text(encoding="utf-8")
-    assert heading.strip() in str(call.get("system", ""))
     assert structure.strip() in str(call.get("system", ""))
 
     # Verify page order preserved in the user text.

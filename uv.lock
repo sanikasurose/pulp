@@ -999,6 +999,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pytesseract" },
+    { name = "tiktoken" },
     { name = "typer" },
 ]
 
@@ -1010,7 +1011,6 @@ dev = [
     { name = "pytest-snapshot" },
     { name = "reportlab" },
     { name = "ruff" },
-    { name = "tiktoken" },
 ]
 
 [package.metadata]
@@ -1024,6 +1024,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2" },
     { name = "pydantic-settings" },
     { name = "pytesseract" },
+    { name = "tiktoken" },
     { name = "typer" },
 ]
 
@@ -1035,7 +1036,6 @@ dev = [
     { name = "pytest-snapshot" },
     { name = "reportlab", specifier = ">=4.4.10" },
     { name = "ruff" },
-    { name = "tiktoken" },
 ]
 
 [[package]]

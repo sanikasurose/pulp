@@ -45,9 +45,7 @@ def structure_document(
         heuristic.warnings.append(f"{msg} Using heuristic output.")
         return heuristic
 
-    heading_prompt = _load_prompt("heading_v1.txt")
-    structure_prompt = _load_prompt("structure_v1.txt")
-    system_prompt = f"{heading_prompt}\n\n{structure_prompt}".strip()
+    system_prompt = _load_prompt("structure_v1.txt").strip()
 
     model = settings.anthropic_model
 
