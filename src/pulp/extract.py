@@ -47,71 +47,74 @@ def _extract_pdf_ocr(
     input_pdf: Path, *, page_count: int, settings: Settings
 ) -> tuple[list[ExtractedPage], list[str]]:
     warnings: list[str] = []
-    pages: list[ExtractedPage] = []
+    _empty = [
+        ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None)
+        for i in range(page_count)
+    ]
 
     try:
         from pdf2image import convert_from_path
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"OCR unavailable: pdf2image import failed ({exc.__class__.__name__}).")
-        pages = [
-            ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None)
-            for i in range(page_count)
-        ]
-        return pages, warnings
+        return _empty, warnings
 
     try:
         import pytesseract
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"OCR unavailable: pytesseract import failed ({exc.__class__.__name__}).")
-        pages = [
-            ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None)
-            for i in range(page_count)
-        ]
-        return pages, warnings
+        return _empty, warnings
 
     try:
         images = convert_from_path(str(input_pdf), dpi=300, thread_count=1)
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"OCR page rendering failed ({exc.__class__.__name__}).")
-        pages = [
-            ExtractedPage(page_number=i + 1, raw_text="", ocr_confidence=None)
-            for i in range(page_count)
-        ]
-        return pages, warnings
+        return _empty, warnings
 
+    pages: list[ExtractedPage] = []
     for i in range(page_count):
         page_number = i + 1
         if i >= len(images):
             warnings.append(f"OCR missing rendered image for page {page_number}.")
             pages.append(ExtractedPage(page_number=page_number, raw_text="", ocr_confidence=None))
             continue
-
-        image = _preprocess_ocr_image(images[i], page_number=page_number, warnings=warnings)
-
-        try:
-            text = pytesseract.image_to_string(image) or ""
-        except Exception as exc:  # noqa: BLE001
-            warnings.append(f"OCR failed for page {page_number} ({exc.__class__.__name__}).")
-            pages.append(ExtractedPage(page_number=page_number, raw_text="", ocr_confidence=None))
-            continue
-
-        confidence: float | None = None
-        try:
-            data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
-            confidence = _ocr_confidence_from_data(data)
-        except Exception:  # noqa: BLE001
-            confidence = None
-
-        if confidence is not None and confidence < float(settings.ocr_low_confidence_threshold):
-            warnings.append(f"Low OCR confidence on page {page_number} (avg={confidence:.1f}).")
-            annotation = f"[LOW CONFIDENCE: avg={confidence:.1f}]"
-            text = f"{annotation}\n{text}" if text.strip() else annotation
-
         pages.append(
-            ExtractedPage(page_number=page_number, raw_text=text, ocr_confidence=confidence)
+            _ocr_single_page(
+                images[i], page_number, pytesseract, settings=settings, warnings=warnings
+            )
         )
 
     return pages, warnings
+
+
+def _ocr_single_page(
+    image: object,
+    page_number: int,
+    pytesseract: object,
+    *,
+    settings: Settings,
+    warnings: list[str],
+) -> ExtractedPage:
+    image = _preprocess_ocr_image(image, page_number=page_number, warnings=warnings)
+
+    try:
+        text = pytesseract.image_to_string(image) or ""  # type: ignore[union-attr]
+    except Exception as exc:  # noqa: BLE001
+        warnings.append(f"OCR failed for page {page_number} ({exc.__class__.__name__}).")
+        return ExtractedPage(page_number=page_number, raw_text="", ocr_confidence=None)
+
+    confidence: float | None = None
+    try:
+        data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)  # type: ignore[union-attr]
+        confidence = _ocr_confidence_from_data(data)
+    except Exception:  # noqa: BLE001
+        confidence = None
+
+    if confidence is not None and confidence < float(settings.ocr_low_confidence_threshold):
+        warnings.append(f"Low OCR confidence on page {page_number} (avg={confidence:.1f}).")
+        annotation = f"[LOW CONFIDENCE: avg={confidence:.1f}]"
+        text = f"{annotation}\n{text}" if text.strip() else annotation
+
+    return ExtractedPage(page_number=page_number, raw_text=text, ocr_confidence=confidence)
 
 
 def _preprocess_ocr_image(image: object, *, page_number: int, warnings: list[str]) -> object:

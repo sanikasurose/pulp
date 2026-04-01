@@ -50,10 +50,8 @@ def clean_extraction(extraction: ExtractionResult, *, settings: Settings) -> Cle
 
 
 _WS_RE = re.compile(r"[ \t]+")
-_PAGE_NUM_RE = re.compile(
-    r"^(?:\s*(?:page\s*)?\d+\s*(?:of\s*\d+)?\s*|\s*\d+\s*/\s*\d+\s*)$",
-    re.IGNORECASE,
-)
+_PAGE_NUM_WORD_RE = re.compile(r"^\s*(?:page\s*)?\d+\s*(?:of\s*\d+)?\s*$", re.IGNORECASE)
+_PAGE_NUM_SLASH_RE = re.compile(r"^\s*\d+\s*/\s*\d+\s*$")
 _CONTINUED_RE = re.compile(r"\b(continued|cont['’]d)\b", re.IGNORECASE)
 _HYPHEN_BREAK_RE = re.compile(r"(?<=\w)-\n(?=[a-z])")
 _HEADINGISH_RE = re.compile(r"^(?:#+\s+|\d+[\.\)]\s+)")
@@ -77,7 +75,7 @@ def _remove_page_number_lines(lines: list[str]) -> tuple[list[str], int]:
         if not line:
             kept.append(line)
             continue
-        if _PAGE_NUM_RE.match(line):
+        if _PAGE_NUM_WORD_RE.match(line) or _PAGE_NUM_SLASH_RE.match(line):
             removed += 1
             continue
         kept.append(line)
@@ -151,6 +149,20 @@ def _rejoin_hyphenation(text: str) -> tuple[str, int]:
     return new_text, count
 
 
+def _join_continuation_lines(lines: list[str], start: int) -> tuple[str, int]:
+    """Join lines[start] with consecutive joinable lines. Returns (joined_text, end_index)."""
+    current = lines[start].strip()
+    j = start
+    while j + 1 < len(lines) and lines[j + 1].strip():
+        nxt = lines[j + 1].strip()
+        if _should_join_lines(current, nxt):
+            current = f"{current.rstrip()} {nxt.lstrip()}"
+            j += 1
+        else:
+            break
+    return current, j
+
+
 def _reassemble_wrapped_lines(text: str) -> tuple[str, int]:
     lines = _normalize_lines(text)
     if not lines:
@@ -167,16 +179,8 @@ def _reassemble_wrapped_lines(text: str) -> tuple[str, int]:
             i += 1
             continue
 
-        current = line
-        j = i
-        while j + 1 < len(lines) and lines[j + 1].strip():
-            nxt = lines[j + 1].strip()
-            if _should_join_lines(current, nxt):
-                current = f"{current.rstrip()} {nxt.lstrip()}"
-                reassembled += 1
-                j += 1
-            else:
-                break
+        current, j = _join_continuation_lines(lines, i)
+        reassembled += j - i
         out.append(current)
         i = j + 1
 

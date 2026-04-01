@@ -20,6 +20,14 @@ except Exception:  # noqa: BLE001
     _Anthropic = None
 
 
+def _llm_unavailable_fallback(msg: str, heuristic: StructuredDoc, *, strict: bool) -> StructuredDoc:
+    """Raise LLMStructuringError when strict, otherwise append warning and return heuristic."""
+    if strict:
+        raise LLMStructuringError(msg)
+    heuristic.warnings.append(f"{msg} Using heuristic output.")
+    return heuristic
+
+
 def structure_document(
     cleaned: CleaningResult, *, settings: Settings, llm_enabled: bool
 ) -> StructuredDoc:
@@ -32,18 +40,16 @@ def structure_document(
         return heuristic
 
     if not settings.anthropic_api_key:
-        msg = "LLM unavailable: ANTHROPIC_API_KEY is missing."
-        if settings.strict_llm:
-            raise LLMStructuringError(msg)
-        heuristic.warnings.append(f"{msg} Using heuristic output.")
-        return heuristic
+        return _llm_unavailable_fallback(
+            "LLM unavailable: ANTHROPIC_API_KEY is missing.", heuristic, strict=settings.strict_llm
+        )
 
     if _Anthropic is None:
-        msg = "LLM unavailable: anthropic client is not importable."
-        if settings.strict_llm:
-            raise LLMStructuringError(msg)
-        heuristic.warnings.append(f"{msg} Using heuristic output.")
-        return heuristic
+        return _llm_unavailable_fallback(
+            "LLM unavailable: anthropic client is not importable.",
+            heuristic,
+            strict=settings.strict_llm,
+        )
 
     system_prompt = _load_prompt("structure_v1.txt").strip()
 

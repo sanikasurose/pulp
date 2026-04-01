@@ -3,7 +3,6 @@
 ![Python](https://img.shields.io/badge/python-3.11+-blue?style=flat-square&logo=python)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 [![CI](https://github.com/sanikasurose/pulp/actions/workflows/ci.yml/badge.svg)](https://github.com/sanikasurose/pulp/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/sanikasurose/pulp/branch/main/graph/badge.svg)](https://codecov.io/gh/sanikasurose/pulp)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=sanikasurose_pulp&metric=alert_status)](https://sonarcloud.io/project/overview?id=sanikasurose_pulp)
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=sanikasurose_pulp&metric=code_smells)](https://sonarcloud.io/project/overview?id=sanikasurose_pulp)
 ![Tests](https://img.shields.io/badge/tests-36%20passing-brightgreen?style=flat-square)
