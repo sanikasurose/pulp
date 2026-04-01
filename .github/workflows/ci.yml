@@ -26,6 +26,8 @@ jobs:
         run: uv run ruff check .
       - name: Tests
         run: uv run pytest -q --cov=src/pulp --cov-report=term-missing --cov-report=xml --cov-fail-under=85
+      # CI scan conflicts if SonarCloud "Automatic Analysis" is on. Disable it under
+      # SonarCloud: your project → Administration → Analysis Method → Automatic Analysis → off.
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
