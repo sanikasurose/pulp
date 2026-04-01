@@ -51,3 +51,6 @@ select = ["E", "F", "I", "UP"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+relative_files = true
